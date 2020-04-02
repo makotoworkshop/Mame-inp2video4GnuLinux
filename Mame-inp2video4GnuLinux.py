@@ -19,9 +19,10 @@
         # Mame-inp2video4GnuLinux/MediaTMP/PngTMP -> fichiers png
         # Mame-inp2video4GnuLinux/Videos -> fichiers x264 ou x265
 #ok- lancer mame en petite fenetre
+#ok- indiquer le poid des fichiers temps et proposer la suppression avec un bouton
+#ok- Coche pour compression vidéo automatique
 #- Alerter si l'inp ne correspond pas à la rom
-#- Demander pour suppression des temporaires avant de quitter et au démarrage si détecté. (indiquer le poid des fichiers temps et proposer la supperssion avec un bouton)
-#- incruster mame dans l'UI
+#- incruster le terminal dans l'ui
 #- réinitialiser tout
 
 # https://python.doctor/page-tkinter-interface-graphique-python-tutoriel
@@ -30,7 +31,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
-import os, re, getpass, time
+import os, re, getpass, time, shutil
 
 # fenêtre principale de l'application
 fenetre = Tk()
@@ -48,14 +49,17 @@ nomJEU = ''
 FichierINP = ''
 cheminSNAP = '/home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/MediaTMP'    # fixe
 Aspect = StringVar()
+poidTMP = StringVar()
 Resolution ='320x240'
-Size = 0
-poidfiles = 0
+MarqueurChoix = 0
+EtatCheck_Box = IntVar ()
 #cheminROMS = '$HOME/.advance/roms'
 #cheminINP = '/home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/softs' # déduire le nom de l'inp avec le chemin
 #file_path = os.path.join(current_directory,file_name)
 
 def ArborescenceExisteTelle():
+    print('Fonction ArborescenceExisteTelle :')
+    os.system('pwd')
     if not os.path.isfile('softs/mame/mame64_0208'):
         print('emulateur introuvable')
         message06()
@@ -67,11 +71,13 @@ def ArborescenceExisteTelle():
 
  
 # Récupére la taille des fichiers temporaires
-def getTotalSizeLocal(): 
+def getTotalSizeTEMP(): 
+    print('Fonction getTotalSizeTEMP :')
+    os.system('pwd')
     print ("")
     print ("Listage des fichiers temporaire en cours :")
     print ("")
-    global size
+  #  global poidTMP
     poidfiles = 0
     print ("recurssif SIZE")
     for root, dirs, files in os.walk('MediaTMP/'):	# liste les fichiers récursivement
@@ -81,18 +87,33 @@ def getTotalSizeLocal():
        #     print (poidfiles)
 
     if poidfiles > 1073741824:   # Gio
-        poid = '  | '+ str(round((poidfiles/1024/1024/1024),2)) + ' Gio'
+        poid = str(round((poidfiles/1024/1024/1024),2)) + ' Gio'
         print("poid %s" %poid)
     elif poidfiles > 1048576:    # Mio
-        poid = '  | '+ str(round((poidfiles/1024/1024),2)) + ' Mio'
+        poid = str(round((poidfiles/1024/1024),2)) + ' Mio'
         print("poid %s" %poid)
     elif poidfiles > 1024:       # Kio
-        poid = '  | '+ str(round((poidfiles/1024),2)) + ' kio'
+        poid = str(round((poidfiles/1024),2)) + ' kio'
         print("poid %s" %poid)
     else:
-        poid = '  | '+ str(poidfiles) + ' io'
+        poid = str(poidfiles) + ' io'
         print("poid %s" %poid)
-    return poid
+ #   return poidTMP
+    poidTMP.set(poid)
+
+
+def SupprimerTMP():
+    print('Fonction SupprimerTMP :')
+    os.system('pwd')
+    shutil.rmtree('MediaTMP')
+    ArborescenceExisteTelle()
+    getTotalSizeTEMP()
+    TestpoidTMP()
+
+def TestpoidTMP():
+    print(poidTMP.get())
+    if poidTMP.get() == '0 io':
+        Bouton_SupprimerTMP.configure(state='disabled')
 
 ####
 #def RomsFolder():
@@ -155,39 +176,62 @@ def InpFile():  # récupére le chemin des inp et le nom de l'inp
 #################
 def playback():
     os.chdir('softs/mame/')
+    print('Fonction playback :')
+    os.system('pwd')
     os.system('./mame64_0208 -rompath '+cheminRomsForder+' -input_directory '+cheminInpFolder+' '+nomJEU+' -playback '+FichierINP)
 #softs/mame/mame64_0208 -rompath $HOME/.advance/roms -input_directory /home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/softs espgal -playback test.inp
-
+    os.chdir('../../')
+    print('Fonction playback FIN :')
+    os.system('pwd')
 
 def playbackAVI():
-  #  global Resolution
+    global MarqueurChoix
     print (Resolution)
     Bouton_RomPath.configure(state='disabled')
     Bouton_InpPath.configure(state='disabled')
     Bouton_playbackMNG.configure(state='disabled')
+    Bouton_SupprimerTMP.configure(state='disabled')
     message03a()
     fenetre.update()
     os.chdir('softs/mame/')
+    print('Fonction playbackAVI :')
+    os.system('pwd')
     print('./mame64_0208 -rompath '+cheminRomsForder+' -input_directory '+cheminInpFolder+' -snapshot_directory '+cheminSNAP+' '+nomJEU+' -playback '+FichierINP+' -aviwrite '+nomJEU+'.avi -resolution '+Resolution+' -exit_after_playback -skip_gameinfo -window')
     os.system('./mame64_0208 -rompath '+cheminRomsForder+' -input_directory '+cheminInpFolder+' -snapshot_directory '+cheminSNAP+' '+nomJEU+' -playback '+FichierINP+' -aviwrite '+nomJEU+'.avi -resolution '+Resolution+' -exit_after_playback -skip_gameinfo -window')
 #softs/mame/mame64_0208 -rompath $HOME/.advance/roms -input_directory /home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/softs -snapshot_directory /home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/MediaTMP espgal -playback test.inp -aviwrite ma_partie.avi -exit_after_playback -skip_gameinfo -window
+    os.chdir('../../')
+    print('Fonction playbackAVI FIN :')
+    os.system('pwd')
+    message04a()
     Bouton_playbackAVI.configure(state='disabled')
     Bouton_EncodageX264.configure(state='normal')
+    getTotalSizeTEMP()
+    MarqueurChoix = 1
+    EncodageAuto()
+
 
 def playbackMNG():
     Bouton_RomPath.configure(state='disabled')
     Bouton_InpPath.configure(state='disabled')
     Bouton_playbackAVI.configure(state='disabled')
+    Bouton_SupprimerTMP.configure(state='disabled')
     message03b()
     fenetre.update()
  #   time.sleep(3)
     os.chdir('softs/mame/')
+    print('Fonction playbackMNG :')
+    os.system('pwd')
     print('./mame64_0208 -rompath '+cheminRomsForder+' -input_directory '+cheminInpFolder+' -snapshot_directory '+cheminSNAP+' '+nomJEU+' -playback '+FichierINP+' -wavwrite '+cheminSNAP+'/'+nomJEU+'.wav -mngwrite '+nomJEU+'.mng -resolution '+Resolution+' -exit_after_playback -skip_gameinfo -window')
     os.system('./mame64_0208 -rompath '+cheminRomsForder+' -input_directory '+cheminInpFolder+' -snapshot_directory '+cheminSNAP+' '+nomJEU+' -playback '+FichierINP+' -wavwrite '+cheminSNAP+'/'+nomJEU+'.wav -mngwrite '+nomJEU+'.mng -resolution '+Resolution+' -exit_after_playback -skip_gameinfo -window')
 # mame nom_de_la_rom -playback ma_partie.inp -wavwrite ~/.mame/snap/ma_partie.wav -mngwrite ma_partie.mng -exit_after_playback
+    os.chdir('../../')
+    print('Fonction playbackMNG FIN :')
+    os.system('pwd')
     Bouton_playbackMNG.configure(state='disabled')
+    getTotalSizeTEMP()
     png()
 # afficher status et sablier
+
 
 ###########################
 # Commande encodage Vidéo #
@@ -196,33 +240,64 @@ def playbackMNG():
 def png():
     message03c()
     fenetre.update()
-    os.chdir('../../MediaTMP/PngTMP')
+    print('Fonction png :')
+    os.chdir('MediaTMP/PngTMP')
+    print('Fonction png :')
+    os.system('pwd')
     os.system('advmng -xn ../'+nomJEU+'.mng')
 # advmng -xn ../$partie.mng
+    os.chdir('../../')
+    print('Fonction png :')
+    os.system('pwd')
     Bouton_EncodageX264.configure(state='normal')
     message04a()
+    getTotalSizeTEMP()
+    EncodageAuto()
+
 
 def x264FromPNG():
+    print('Fonction x264FromPNG :')
+    os.system('pwd')
     message04b()
     fenetre.update()
-    os.system('mencoder mf://*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile ../'+nomJEU+'.wav -o ../../Videos/'+nomJEU+'.mp4')
+    os.system('mencoder mf://MediaTMP/PngTMP/*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect.get()+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile MediaTMP/'+nomJEU+'.wav -o Videos/'+nomJEU+'.mp4')
 # mencoder mf://*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect=3/4:vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile ma_partie.wav -o ma_partie.mp4
     Bouton_EncodageX264.configure(state='disabled')
-    message05()
+
 
 def x264FromAVI():
     message04b()
     fenetre.update()
-    os.chdir('../../MediaTMP/')
-    os.system('mencoder '+nomJEU+'.avi -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect.get()+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -o ../Videos/'+nomJEU+'.mp4')
+    print('Fonction x264FromAVI :')
+    os.system('pwd')
+    os.system('mencoder MediaTMP/'+nomJEU+'.avi -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect.get()+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -o Videos/'+nomJEU+'.mp4')
 # mencoder mf://*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect=3/4:vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile ma_partie.wav -o ma_partie.mp4
     Bouton_EncodageX264.configure(state='disabled')
+
+
+def Encodagex264():
+    global MarqueurChoix
+    if MarqueurChoix == 1:
+        print('MarqueurChoix ', MarqueurChoix)
+        x264FromAVI()
+        MarqueurChoix = 0
+    else:
+        x264FromPNG()
+    getTotalSizeTEMP()
+    Bouton_SupprimerTMP.configure(state='normal')
     message05()
+
+def EncodageAuto():
+    if EtatCheck_Box.get() == 1:
+        print(EtatCheck_Box.get())
+        Encodagex264()
+
 
 #####################
 # Boutons d'actions #
 #####################
-
+# Boutons Radio #
+#################
 #def callbackRadio1(event):
 def callbackRadio1():
     global Resolution
@@ -251,6 +326,17 @@ Radio2.place(x=780, y=225)
 #labelValue.pack()
 
 
+# Check Box #
+#############
+
+Check_Box = Checkbutton(fenetre, variable = EtatCheck_Box, text='Encodage Vidéo automatique ',font='Monospace 12 bold',bg='slate gray',activebackground='slate gray',activeforeground='lime green',highlightbackground='lime green',highlightthickness=2)
+Check_Box.pack(anchor='w', padx=10)
+Check_Box.place(x=600, y=328)
+Check_Box.select()
+
+
+# Boutons #
+###########
 Bouton_RomPath = Button(fenetre,text="Choisir une ROM",font='Monospace 16 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=RomsFile)
 Bouton_RomPath.pack()
 Bouton_RomPath.place(x=90, y=120)
@@ -271,7 +357,7 @@ Bouton_playbackAVI.configure(state='disabled')
 
 Bouton_playbackMNG = Button(fenetre,text="Rejouer vers MNG",font='Monospace 16 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=playbackMNG)
 Bouton_playbackMNG.pack()
-Bouton_playbackMNG.place(x=450, y=320)
+Bouton_playbackMNG.place(x=350, y=320)
 Bouton_playbackMNG.configure(state='disabled')
 #Bouton_playbackMNG.configure(state='normal')
 
@@ -281,11 +367,17 @@ Bouton_playbackMNG.configure(state='disabled')
 #Bouton_PngConvert.configure(state='disabled')
 #Bouton_PngConvert.configure(state='normal')
 
-Bouton_EncodageX264 = Button(fenetre,text="EncodageX264",font='Monospace 16 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=x264FromAVI)
+Bouton_EncodageX264 = Button(fenetre,text="EncodageX264",font='Monospace 16 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=Encodagex264)
 Bouton_EncodageX264.pack()
 Bouton_EncodageX264.place(x=90, y=370)
 Bouton_EncodageX264.configure(state='disabled')
 #Bouton_EncodageX264.configure(state='normal')
+
+Bouton_SupprimerTMP = Button(fenetre,text="SupprimerTMP",font='Monospace 12 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=SupprimerTMP)
+Bouton_SupprimerTMP.pack()
+Bouton_SupprimerTMP.place(x=1100, y=400)
+#Bouton_SupprimerTMP.configure(state='disabled')
+Bouton_SupprimerTMP.configure(state='normal')
 
 ##########
 # Labels #
@@ -319,6 +411,15 @@ Label02_02 = Label(fenetre, text='05 -',font='Monospace 16 bold',borderwidth=3,b
 Label02_02.pack()
 Label02_02.place(x=20, y=375) 
 
+Label02_03 = Label(fenetre, text='Les fichiers temporaires occupent :',font='Monospace 16 bold',borderwidth=3,bg='slate gray')
+Label02_03.pack()
+Label02_03.place(x=500, y=400) 
+
+TEMPFilesLabel = Label(fenetre, textvariable=poidTMP)
+TEMPFilesLabel.pack()
+TEMPFilesLabel.place(x=1000, y=400)
+
+
 ################
 # Zone Message #
 ################
@@ -340,19 +441,19 @@ def message02():
     msg.configure(font=('Arial Bold',25), bg='gray')
 
 def message03a():
-    MessageTexte.set("Ouverture de la fenêtre Mame, validez si besoin…\nCapture AVI en cours, Veuillez patienter")
+    MessageTexte.set("Ouverture de la fenêtre Mame, validez si besoin…\nCapture AVI en cours, Veuillez patienter !")
     msg.configure(font=('Arial Bold',25), bg='gray')
 
 def message03b():
-    MessageTexte.set("Ouverture de la fenêtre Mame, validez si besoin…\nCapture MNG+WAV en cours, Veuillez patienter")
+    MessageTexte.set("Ouverture de la fenêtre Mame, validez si besoin…\nCapture MNG+WAV en cours, Veuillez patienter !")
     msg.configure(font=('Arial Bold',25), bg='gray')
 
 def message03c():
-    MessageTexte.set("Capture terminée,\nConversion MNG vers PNG en cours, Veuillez patienter")
+    MessageTexte.set("Capture terminée,\nConversion MNG vers PNG en cours, Veuillez patienter !")
     msg.configure(font=('Arial Bold',25), bg='gray')
 
 def message04a():
-    MessageTexte.set("Choisissez le type de compression vidéo\nOu disposez dés maintenant des fichiers brut dans le dossier temporaire")
+    MessageTexte.set("Capture terminée ! Prêt pour la compression vidéo,\nOu disposez dés maintenant des fichiers bruts dans le dossier temporaire")
     msg.configure(font=('Arial Bold',25), bg='gray')
 
 def message04b():
@@ -371,6 +472,7 @@ def message06():
 # Programme #
 #############
 ArborescenceExisteTelle()
-getTotalSizeLocal()
+getTotalSizeTEMP()
+TestpoidTMP()
 
 fenetre.mainloop()
