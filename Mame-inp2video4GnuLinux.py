@@ -22,11 +22,14 @@
 #ok- indiquer le poid des fichiers temps et proposer la suppression avec un bouton
 #ok- Coche pour compression vidéo automatique
 #ok- réinitialiser tout
-#- Alerter si l'inp ne correspond pas à la rom sortie stderr, et réinitialiser
+#ok- Alerter si l'inp ne correspond pas à la rom et réinitialiser.
+#ok- cheminSNAP à revoir ?
+#ok- tkinter récuperer position de la fenétre, pour que le popup apparaisse tjrs à sa place, même après avoir déplacer la fenétre du pgm
+#ok- différentier un dossier png par nom de jeu
+#ok- changer bouton et message popup en cas de mauvais inp/rom
+#- sablier progression % de l'extraction png, avec nombre de frames extraites indiquée par mame en fin de playback
+#- tester la présence d'advmng    /usr/bin/advmng  echo $PATH   dpkg --status advancecomp
 #- incruster le terminal dans l'ui ?
-#- cheminSNAP à revoir ?
-#- sablier progression % de l'extraction png, avec nombre de frame extraites indiquée par mame en fin de playback
-#- différentier un dossier png par nom de jeu
 
 
 # https://python.doctor/page-tkinter-interface-graphique-python-tutoriel
@@ -45,7 +48,7 @@ fenetre.title('Mame inp to video for GNU/Linux')
 width = 1300
 height = 450
 offsetX = 0
-offsetY = 0
+offsetY = 600
 fenetre.geometry('%dx%d+%d+%d' % (width, height, offsetX, offsetY))
 fenetre['bg']='slate gray'
 
@@ -57,7 +60,7 @@ cheminINP = ''
 cheminInpFolder = ''
 nomJEU = ''
 FichierINP = ''
-cheminSNAP = '/home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/MediaTMP'    # fixe
+cheminSNAP = os.path.dirname(os.path.abspath('MediaTMP'))+'/MediaTMP'
 Aspect = StringVar()
 poidTMP = StringVar()
 Resolution ='320x240'
@@ -77,7 +80,7 @@ def ArborescenceExisteTelle():
         message06()
         os.makedirs('softs/mame', exist_ok=True)
     os.makedirs('MediaTMP', exist_ok=True)
-    os.makedirs('MediaTMP/PngTMP', exist_ok=True)
+#    os.makedirs('MediaTMP/PngTMP', exist_ok=True)
     os.makedirs('Videos', exist_ok=True)
 #    os.makedirs('TEST/toto', exist_ok=True)
 
@@ -144,9 +147,7 @@ def RomsFile(): # récupére le chemin des roms et le nom du jeu
     cheminROM = filedialog.askopenfilename(initialdir='/home/'+USER, title="Ouvrir un fichier rom mame",filetypes=[('zip files','.zip'),('all files','.*')])
     if len(cheminROM) > 0:
         print ("[LOG] : vous avez choisi la rom: %s" % cheminROM)
-        RomLabel02 = Label(fenetre, text='-> '+cheminROM,font='Monospace 12 bold',borderwidth=3,bg='slate gray')
-        RomLabel02.pack()
-        RomLabel02.place(x=320, y=125)
+        RomLabel02.configure(text='-> '+cheminROM,font='Monospace 12 bold',borderwidth=3,bg='slate gray')
 
         var1 = re.split(r'\W+',cheminROM)
         nomJEU = var1[len(var1)-2]
@@ -167,9 +168,7 @@ def InpFile():  # récupére le chemin des inp et le nom de l'inp
     cheminINP = filedialog.askopenfilename(initialdir='.',title="Ouvrir un fichier d'input mame",filetypes=[('inp files','.inp'),('all files','.*')])
     if len(cheminINP) > 0:
         print ("[LOG] : vous avez choisi le fichier: %s" % cheminINP)
-        InpLabel02 = Label(fenetre, text='-> '+cheminINP,font='Monospace 12 bold',borderwidth=3,bg='slate gray')
-        InpLabel02.pack()
-        InpLabel02.place(x=320, y=175)
+        InpLabel02.configure(text='-> '+cheminINP,font='Monospace 12 bold',borderwidth=3,bg='slate gray')
 
         var1 = re.split(r'\W+',cheminINP)
         FichierINP = var1[len(var1)-2] + '.inp'
@@ -186,15 +185,6 @@ def InpFile():  # récupére le chemin des inp et le nom de l'inp
 #################
 # Commande MAME #
 #################
-def playback():
-    os.chdir('softs/mame/')
-    print('[LOG] : Fonction playback :')
-#    os.system('pwd')
-    os.system('./mame64_0208 -rompath '+cheminRomsForder+' -input_directory '+cheminInpFolder+' '+nomJEU+' -playback '+FichierINP)
-#softs/mame/mame64_0208 -rompath $HOME/.advance/roms -input_directory /home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/softs espgal -playback test.inp
-    os.chdir('../../')
-    print('[LOG] : Fonction playback FIN :')
-    os.system('pwd')
 
 def playbackAVI():
     global MarqueurChoix
@@ -247,7 +237,6 @@ def playbackMNG():
         png()
 # afficher status et sablier
 
-
 def rapport():	# Analyse playbackMNG.log pour réccupérer le nombre de frame jouées
     global ligneLOG
 #    fichierlog = open('playback.log', 'r', encoding='iso-8859-15')  # ouvre le fichier en lecture
@@ -267,10 +256,13 @@ def rapport():	# Analyse playbackMNG.log pour réccupérer le nombre de frame jo
     if nbFrames[6] == 'not':    # Input file is for machine 'espgal', not for current machine 'agallet'
         print('[LOG] : ERROR = ',ligneLOG)
         message07()
+        PopupERREUR() # Reinit
         return 'ERROR'
     else:
         print('[LOG] : Nombre de frames jouées = ', nbFrames[3])    # Total playback frames: 223
         return nbFrames[3]
+
+
 
 
 ###########################
@@ -281,7 +273,8 @@ def png():
     message03c()
     fenetre.update()
     print('[LOG] : Fonction png :')
-    os.chdir('MediaTMP/PngTMP')
+    os.mkdir('MediaTMP/'+nomJEU)
+    os.chdir('MediaTMP/'+nomJEU)
 #    os.system('pwd')
     os.system('advmng -xn ../'+nomJEU+'.mng') #  1>/dev/pts/1
 # advmng -xn ../$partie.mng
@@ -298,10 +291,10 @@ def x264FromPNG():
 #    os.system('pwd')
     message04b()
     fenetre.update()
-    os.system('mencoder mf://MediaTMP/PngTMP/*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect.get()+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile MediaTMP/'+nomJEU+'.wav -o Videos/'+nomJEU+'.mp4') # 1>/dev/pts/1
+    os.system('mencoder mf://MediaTMP/'+nomJEU+'/*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect.get()+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile MediaTMP/'+nomJEU+'.wav -o Videos/'+nomJEU+'.mp4') # 1>/dev/pts/1
 # mencoder mf://*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect=3/4:vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile ma_partie.wav -o ma_partie.mp4
     Bouton_EncodageX264.configure(state='disabled')
-    Popup() # Reinit
+    PopupFIN() # Reinit
 
 
 def x264FromAVI():
@@ -312,7 +305,7 @@ def x264FromAVI():
     os.system('mencoder MediaTMP/'+nomJEU+'.avi -ovc lavc -lavcopts vcodec=mpeg4:aspect='+Aspect.get()+':vqscale=2 -oac mp3lame -lameopts cbr:br=128 -o Videos/'+nomJEU+'.mp4') #  1>/dev/pts/1
 # mencoder mf://*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect=3/4:vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile ma_partie.wav -o ma_partie.mp4
     Bouton_EncodageX264.configure(state='disabled')
-    Popup() # Reinit
+    PopupFIN() # Reinit
 
 
 def Encodagex264():
@@ -428,6 +421,9 @@ Bouton_SupprimerTMP.configure(state='normal')
 ##########
 # Labels #
 ##########
+def ChangeText(DeQui):
+   DeQui.config(text = '')
+
 Titre01 = Label(fenetre, text='Prérequis:',font='Monospace 16 bold',borderwidth=3,bg='slate gray')
 Titre01.pack()
 Titre01.place(x=5, y=80)
@@ -436,14 +432,21 @@ Label01_01 = Label(fenetre, text='01 -',font='Monospace 16 bold',borderwidth=3,b
 Label01_01.pack()
 Label01_01.place(x=20, y=125)
 
+RomLabel02 = Label(fenetre, text='',font='Monospace 12 bold',borderwidth=3,bg='slate gray')
+RomLabel02.pack()
+RomLabel02.place(x=320, y=125)
+
 Label01_02 = Label(fenetre, text='02 -',font='Monospace 16 bold',borderwidth=3,bg='slate gray')
 Label01_02.pack()
 Label01_02.place(x=20, y=175) 
 
+InpLabel02 = Label(fenetre, text='',font='Monospace 12 bold',borderwidth=3,bg='slate gray')
+InpLabel02.pack()
+InpLabel02.place(x=320, y=175)
+
 Label01_03 = Label(fenetre, text="03 - S'agit'il d'un jeu Horizontal ou Vertical :",font='Monospace 16 bold',borderwidth=3,bg='slate gray')
 Label01_03.pack()
 Label01_03.place(x=20, y=225) 
-
 
 Titre02 = Label(fenetre, text='Préférences:',font='Monospace 16 bold',borderwidth=3,bg='slate gray')
 Titre02.pack()
@@ -522,41 +525,83 @@ def message07():
     MessageTexte.set(ligneLOG)
     msg.configure(font=('Arial Bold',25), bg='red')
 
+
+#################################
+# Popup de fin d'erreur/relance #
+#################################
+class PopupERREUR(Canvas):
+    def __init__(self):
+        Canvas.__init__(self)
+        self.popup = Tk()
+     
+        # Placement du popup par rapport à la fenêtre du pgm
+        width = 265 # width for the Tk popup
+        height = 100 # height for the Tk popup
+        self.popup.geometry('%dx%d+%d+%d' % (width, height, fenetre.winfo_x()+500, fenetre.winfo_y()+140))  # winfo récupére la position actuelle
+        self.popup['bg']='slate gray'
+        self.popup.title("Fin…")
+        self.popup.wm_attributes('-topmost', 1) # garde le popup au dessus
+        self.grab_set() # empéche d'interragir avec la fenetre mére
+
+        #texte
+        self.label = Label(self.popup, text='''Erreur !''',font='Monospace 16 bold', fg="lime green", bg='slate gray')
+        self.label.pack(side=TOP, padx=40,pady=5)
+
+        #bouttons
+        self.Bouton_Reinitialiser = Button(self.popup,text="Recommencer",font='Monospace 20 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=self.REstart)
+        self.Bouton_Reinitialiser.pack(side=LEFT, padx=40, pady=10)
+
+    def REstart(self):  # pour fermer le popup
+        print('[LOG] : Popup Fonction RElance')
+        Bouton_RomPath.configure(state='normal')
+        Bouton_InpPath.configure(state='disabled')
+        Bouton_playbackMNG.configure(state='disabled')
+        Bouton_playbackMNG.configure(state='disabled')
+        Bouton_EncodageX264.configure(state='disabled')
+        ChangeText(RomLabel02)
+        ChangeText(InpLabel02)
+        message00()
+        self.popup.destroy()
+        self.grab_release() # redonne l'interraction avec la fenétre mère
+
+
 #############################
 # Popup de fin d'opérations #
 #############################
-class Popup(Canvas):
-  def __init__(self):
-    Canvas.__init__(self)
-    self.popup = Tk()
- 
-    # Placement du popup par rapport à la fenêtre du pgm
-    width = 250 # width for the Tk popup
-    height = 100 # height for the Tk popup
-    self.popup.geometry('%dx%d+%d+%d' % (width, height, offsetX+500, offsetY+140))
-    self.popup['bg']='slate gray'
-    self.popup.title("Fin…")
-    self.popup.wm_attributes('-topmost', 1) # garde le popup au dessus
-    self.grab_set() # empéche d'interragir avec la fenetre mére
+class PopupFIN(Canvas):
+    def __init__(self):
+        Canvas.__init__(self)
+        self.popup = Tk()
+     
+        # Placement du popup par rapport à la fenêtre du pgm
+        width = 250 # width for the Tk popup
+        height = 100 # height for the Tk popup
+        self.popup.geometry('%dx%d+%d+%d' % (width, height, fenetre.winfo_x()+500, fenetre.winfo_y()+140))  # winfo récupére la position actuelle
+        self.popup['bg']='slate gray'
+        self.popup.title("Fin…")
+        self.popup.wm_attributes('-topmost', 1) # garde le popup au dessus
+        self.grab_set() # empéche d'interragir avec la fenetre mére
 
-    #texte
-    self.label = Label(self.popup, text='''C'est fini !''',font='Monospace 16 bold', fg="lime green", bg='slate gray')
-    self.label.pack(side=TOP, padx=40,pady=5)
+        #texte
+        self.label = Label(self.popup, text='''C'est fini !''',font='Monospace 16 bold', fg="lime green", bg='slate gray')
+        self.label.pack(side=TOP, padx=40,pady=5)
 
-    #bouttons
-    self.Bouton_Reinitialiser = Button(self.popup,text="Terminer",font='Monospace 20 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=self.REstart)
-    self.Bouton_Reinitialiser.pack(side=LEFT, padx=40, pady=10)
+        #bouttons
+        self.Bouton_Reinitialiser = Button(self.popup,text="Terminer",font='Monospace 20 bold',borderwidth=3,bg='light gray',activeforeground='lime green',command=self.REstart)
+        self.Bouton_Reinitialiser.pack(side=LEFT, padx=40, pady=10)
 
-  def REstart(self):  # pour fermer le popup
-    print('[LOG] : Fonction REstart')
-    Bouton_RomPath.configure(state='normal')
-    Bouton_InpPath.configure(state='disabled')
-    Bouton_playbackMNG.configure(state='disabled')
-    Bouton_playbackMNG.configure(state='disabled')
-    Bouton_EncodageX264.configure(state='disabled')
-    message00()
-    self.popup.destroy()
-    self.grab_release() # redonne l'interraction avec la fenétre mère
+    def REstart(self):  # pour fermer le popup
+        print('[LOG] : Popup Fonction REstart')
+        Bouton_RomPath.configure(state='normal')
+        Bouton_InpPath.configure(state='disabled')
+        Bouton_playbackMNG.configure(state='disabled')
+        Bouton_playbackMNG.configure(state='disabled')
+        Bouton_EncodageX264.configure(state='disabled')
+        ChangeText(RomLabel02)
+        ChangeText(InpLabel02)
+        message00()
+        self.popup.destroy()
+        self.grab_release() # redonne l'interraction avec la fenétre mère
 
 #############################################################
 # Affichage de la sortie de clamav dans le terminal intégré #
@@ -575,6 +620,5 @@ class Popup(Canvas):
 ArborescenceExisteTelle()
 getTotalSizeTEMP()
 TestpoidTMP()
-Popup()
 
 fenetre.mainloop()
