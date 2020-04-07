@@ -30,6 +30,7 @@
 #- sablier progression % de l'extraction png, avec nombre de frames extraites indiquée par mame en fin de playback
 #- tester la présence d'advmng    /usr/bin/advmng  echo $PATH   dpkg --status advancecomp
 #- incruster le terminal dans l'ui ?
+#- coller des try partout…
 
 
 # https://python.doctor/page-tkinter-interface-graphique-python-tutoriel
@@ -38,7 +39,13 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
-import os, re, getpass, time, shutil
+import os, re, getpass, time, shutil, glob
+from threading import Thread
+
+### Fichier Log
+#log = open('log', 'w') 
+#sys.stdout = log
+
 
 # fenêtre principale de l'application
 fenetre = Tk()
@@ -68,21 +75,19 @@ MarqueurChoix = 0
 EtatCheck_Box = IntVar ()
 LogfileName = 'inp2video.log'
 ligneLOG = ''
-#cheminROMS = '$HOME/.advance/roms'
-#cheminINP = '/home/makoto/Documents/Python/Dev_Python/Mame-inp2video4GnuLinux/softs' # déduire le nom de l'inp avec le chemin
-#file_path = os.path.join(current_directory,file_name)
+NBimages = ''
+#NumberOfLine = IntVar()
 
 def ArborescenceExisteTelle():
-    print('[LOG] : Fonction ArborescenceExisteTelle :')
+    now = time.localtime(time.time())
+    print('[LOG] : '+ time.strftime("%Y-%m-%d %H:%M:%S"+' | Fonction ArborescenceExisteTelle :', now))
 #    os.system('pwd')
     if not os.path.isfile('softs/mame/mame64_0208'):
         print('[LOG] : emulateur introuvable')
         message06()
         os.makedirs('softs/mame', exist_ok=True)
     os.makedirs('MediaTMP', exist_ok=True)
-#    os.makedirs('MediaTMP/PngTMP', exist_ok=True)
     os.makedirs('Videos', exist_ok=True)
-#    os.makedirs('TEST/toto', exist_ok=True)
 
  
 # Récupére la taille des fichiers temporaires
@@ -131,15 +136,6 @@ def TestpoidTMP():
         Bouton_SupprimerTMP.configure(state='disabled')
 
 ####
-#def RomsFolder():
-#    global cheminROM
-#    cheminROM = filedialog.askdirectory(initialdir='/home/'+USER, title='Choisissez un repertoire')
-#    if len(cheminROM) > 0:
-#        print ("vous avez choisi le repertoire %s" % cheminROM)
-#        RomLabel = Label(fenetre, text=cheminROM)
-#        RomLabel.pack()
-#        RomLabel.place(x=150, y=25)
-
 def RomsFile(): # récupére le chemin des roms et le nom du jeu
     global cheminROM
     global cheminRomsForder
@@ -214,6 +210,7 @@ def playbackAVI():
 
 
 def playbackMNG():
+    global NBimages
     Bouton_RomPath.configure(state='disabled')
     Bouton_InpPath.configure(state='disabled')
     Bouton_playbackAVI.configure(state='disabled')
@@ -234,6 +231,8 @@ def playbackMNG():
     Bouton_playbackMNG.configure(state='disabled')
     getTotalSizeTEMP()
     if rapport() != 'ERROR':
+        NBimages = rapport()
+        print('NBimages : ',NBimages)
         png()
 # afficher status et sablier
 
@@ -259,7 +258,7 @@ def rapport():	# Analyse playbackMNG.log pour réccupérer le nombre de frame jo
         PopupERREUR() # Reinit
         return 'ERROR'
     else:
-        print('[LOG] : Nombre de frames jouées = ', nbFrames[3])    # Total playback frames: 223
+#        print('[LOG] : Nombre de frames jouées = ', nbFrames[3])    # Total playback frames: 223
         return nbFrames[3]
 
 
@@ -273,11 +272,17 @@ def png():
     message03c()
     fenetre.update()
     print('[LOG] : Fonction png :')
-    os.mkdir('MediaTMP/'+nomJEU)
+    try:
+        os.mkdir('MediaTMP/'+nomJEU)
+    except FileExistsError:
+        for filename in glob.glob(r'MediaTMP/'+nomJEU+'/*.png'):
+            os.remove(filename) 
+
     os.chdir('MediaTMP/'+nomJEU)
+    print('pwd png advmng :')
 #    os.system('pwd')
-    os.system('advmng -xn ../'+nomJEU+'.mng') #  1>/dev/pts/1
-# advmng -xn ../$partie.mng
+    TailThread.start()  ####
+    os.system('advmng -xn ../'+nomJEU+'.mng >> advmngLOG') #  1>/dev/pts/1
     os.chdir('../../')
 #    os.system('pwd')
     Bouton_EncodageX264.configure(state='normal')
@@ -468,6 +473,9 @@ TEMPFilesLabel = Label(fenetre, textvariable=poidTMP)
 TEMPFilesLabel.pack()
 TEMPFilesLabel.place(x=1000, y=400)
 
+SablierLabel = Label(fenetre, textvariable=NBimages)
+SablierLabel.pack()
+SablierLabel.place(x=1000, y=360)
 
 ################
 # Zone Message #
@@ -603,6 +611,48 @@ class PopupFIN(Canvas):
         self.popup.destroy()
         self.grab_release() # redonne l'interraction avec la fenétre mère
 
+
+def Tail(): # appellé via le thread par la fonction png() (attention, elle impose son chemin)
+    print('[LOG] : Tail :')
+    try:
+        os.chdir('MediaTMP/'+nomJEU)
+ #       os.system('pwd')
+        os.remove('advmngLOG')
+    except:
+        pass
+
+    fichier= open('advmngLOG',"w")  # création du fichier vide
+    fichier.close()
+    NumberOfLine = 0
+#    os.system('pwd')
+
+    try :
+        while True:
+#            print('pwd while tail :')
+#            os.system('pwd')
+            with open('advmngLOG', 'r') as f:
+#                os.system('pwd')
+                for line in f:
+                    NumberOfLine += 1
+                print ('Nombre de lignes: ',NumberOfLine)
+                if NumberOfLine >= int(NBimages):   # Condition d'arrêt de la boucle
+                    break
+            NumberOfLine = 0
+            time.sleep(0.1) # Pour éviter au processeur de bosser comme un dingo
+    except FileNotFoundError:   # Si la boucle dépasse la condition d'arrêt, elle se relance, mais le chemin ayant changé car png() ne s'exécute pas, le fichier n'est pas trouvé, car au passage de «pwd while tail» on est descendu de deux dossiers.
+        pass
+
+#######################
+# Classe : ThreadTail #
+#######################
+class ThreadTail(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        print("init du thread Tail")
+    def run (self):
+        Tail()
+#### fin de la Classe : Threadtail
+
 #############################################################
 # Affichage de la sortie de clamav dans le terminal intégré #
 #############################################################
@@ -620,5 +670,8 @@ class PopupFIN(Canvas):
 ArborescenceExisteTelle()
 getTotalSizeTEMP()
 TestpoidTMP()
+#log.close()
+TailThread = ThreadTail()
+
 
 fenetre.mainloop()
