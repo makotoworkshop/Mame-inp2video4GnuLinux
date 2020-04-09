@@ -27,10 +27,10 @@
 #ok- tkinter récuperer position de la fenétre, pour que le popup apparaisse tjrs à sa place, même après avoir déplacer la fenétre du pgm
 #ok- différentier un dossier png par nom de jeu
 #ok- changer bouton et message popup en cas de mauvais inp/rom
-#- sablier progression % de l'extraction png, avec nombre de frames extraites indiquée par mame en fin de playback
+#ok- sablier progression % de l'extraction png, avec nombre de frames extraites indiquée par mame en fin de playback
 #- tester la présence d'advmng    /usr/bin/advmng  echo $PATH   dpkg --status advancecomp
-#- incruster le terminal dans l'ui ?
 #- coller des try partout…
+#- faire une class avec le compteur pour permettre le destroy de la progressbarr
 
 
 # https://python.doctor/page-tkinter-interface-graphique-python-tutoriel
@@ -75,8 +75,9 @@ MarqueurChoix = 0
 EtatCheck_Box = IntVar ()
 LogfileName = 'inp2video.log'
 ligneLOG = ''
-NBimages = ''
-#NumberOfLine = IntVar()
+NBimages = IntVar()
+Ligne = IntVar()
+pourcent = IntVar()
 
 def ArborescenceExisteTelle():
     now = time.localtime(time.time())
@@ -129,6 +130,7 @@ def SupprimerTMP():
     ArborescenceExisteTelle()
     getTotalSizeTEMP()
     TestpoidTMP()
+    Bouton_EncodageX264.configure(state='disabled')
 
 def TestpoidTMP():
     print(poidTMP.get())
@@ -210,7 +212,6 @@ def playbackAVI():
 
 
 def playbackMNG():
-    global NBimages
     Bouton_RomPath.configure(state='disabled')
     Bouton_InpPath.configure(state='disabled')
     Bouton_playbackAVI.configure(state='disabled')
@@ -231,10 +232,11 @@ def playbackMNG():
     Bouton_playbackMNG.configure(state='disabled')
     getTotalSizeTEMP()
     if rapport() != 'ERROR':
-        NBimages = rapport()
-        print('NBimages : ',NBimages)
-        png()
-# afficher status et sablier
+        NBimages.set(rapport())
+        print('NBimages : ',NBimages.get())
+        CompteurThread.start()
+        PNGThread.start()  #### démarrage du thread
+
 
 def rapport():	# Analyse playbackMNG.log pour réccupérer le nombre de frame jouées
     global ligneLOG
@@ -263,15 +265,27 @@ def rapport():	# Analyse playbackMNG.log pour réccupérer le nombre de frame jo
 
 
 
-
 ###########################
 # Commande encodage Vidéo #
 ###########################
+
+######################
+# Classe : ThreadPNG #
+######################
+class ThreadPNG(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        print("init du thread PNG")
+    def run (self):
+        png()
+#### fin de la Classe : ThreadPNG
 
 def png():
     message03c()
     fenetre.update()
     print('[LOG] : Fonction png :')
+#    print('pwd png advmng :')
+#    os.system('pwd')
     try:
         os.mkdir('MediaTMP/'+nomJEU)
     except FileExistsError:
@@ -279,10 +293,9 @@ def png():
             os.remove(filename) 
 
     os.chdir('MediaTMP/'+nomJEU)
-    print('pwd png advmng :')
+ #   print('pwd png advmng :')
 #    os.system('pwd')
-    TailThread.start()  ####
-    os.system('advmng -xn ../'+nomJEU+'.mng >> advmngLOG') #  1>/dev/pts/1
+    os.system('advmng -xn ../'+nomJEU+'.mng > advmngLOG') #  1>/dev/pts/1
     os.chdir('../../')
 #    os.system('pwd')
     Bouton_EncodageX264.configure(state='normal')
@@ -290,6 +303,7 @@ def png():
     getTotalSizeTEMP()
     EncodageAuto('PNG')
 
+#################################
 
 def x264FromPNG():
     print('[LOG] : Fonction x264FromPNG :')
@@ -311,7 +325,6 @@ def x264FromAVI():
 # mencoder mf://*.png -mf type=png:fps=60 -ovc lavc -lavcopts vcodec=mpeg4:aspect=3/4:vqscale=2 -oac mp3lame -lameopts cbr:br=128 -audiofile ma_partie.wav -o ma_partie.mp4
     Bouton_EncodageX264.configure(state='disabled')
     PopupFIN() # Reinit
-
 
 def Encodagex264():
     global MarqueurChoix
@@ -469,13 +482,20 @@ Label02_03 = Label(fenetre, text='Les fichiers temporaires occupent :',font='Mon
 Label02_03.pack()
 Label02_03.place(x=500, y=400) 
 
-TEMPFilesLabel = Label(fenetre, textvariable=poidTMP)
+TEMPFilesLabel = Label(fenetre, textvariable = poidTMP)
 TEMPFilesLabel.pack()
-TEMPFilesLabel.place(x=1000, y=400)
+TEMPFilesLabel.place(x=970, y=408)
 
-SablierLabel = Label(fenetre, textvariable=NBimages)
-SablierLabel.pack()
-SablierLabel.place(x=1000, y=360)
+#SablierLabel02 = Label(fenetre, textvariable = Ligne)
+#SablierLabel02.pack()
+#SablierLabel02.place(x=1060, y=89)
+#SablierLabel03 = Label(fenetre, text = '/',bg='slate gray')
+#SablierLabel03.pack()
+#SablierLabel03.place(x=1090, y=89)
+#SablierLabel04 = Label(fenetre, textvariable = NBimages)
+#SablierLabel04.pack()
+#SablierLabel04.place(x=1110, y=89)
+
 
 ################
 # Zone Message #
@@ -579,7 +599,7 @@ class PopupERREUR(Canvas):
 class PopupFIN(Canvas):
     def __init__(self):
         Canvas.__init__(self)
-        self.popup = Tk()
+        self.popup = Tk()   # préférer un toplevel ? https://www.commentcamarche.net/forum/affich-35269536-entry-stringvar-pas-mis-a-jour
      
         # Placement du popup par rapport à la fenêtre du pgm
         width = 250 # width for the Tk popup
@@ -608,50 +628,102 @@ class PopupFIN(Canvas):
         ChangeText(RomLabel02)
         ChangeText(InpLabel02)
         message00()
+        PNGThread.__init__()  #### réinit du thread
+        CompteurThread.__init__()  #### réinit du thread
         self.popup.destroy()
         self.grab_release() # redonne l'interraction avec la fenétre mère
 
 
-def Tail(): # appellé via le thread par la fonction png() (attention, elle impose son chemin)
-    print('[LOG] : Tail :')
-    try:
-        os.chdir('MediaTMP/'+nomJEU)
- #       os.system('pwd')
-        os.remove('advmngLOG')
-    except:
-        pass
-
-    fichier= open('advmngLOG',"w")  # création du fichier vide
-    fichier.close()
-    NumberOfLine = 0
-#    os.system('pwd')
-
-    try :
-        while True:
-#            print('pwd while tail :')
-#            os.system('pwd')
-            with open('advmngLOG', 'r') as f:
-#                os.system('pwd')
-                for line in f:
-                    NumberOfLine += 1
-                print ('Nombre de lignes: ',NumberOfLine)
-                if NumberOfLine >= int(NBimages):   # Condition d'arrêt de la boucle
-                    break
-            NumberOfLine = 0
-            time.sleep(0.1) # Pour éviter au processeur de bosser comme un dingo
-    except FileNotFoundError:   # Si la boucle dépasse la condition d'arrêt, elle se relance, mais le chemin ayant changé car png() ne s'exécute pas, le fichier n'est pas trouvé, car au passage de «pwd while tail» on est descendu de deux dossiers.
-        pass
-
-#######################
-# Classe : ThreadTail #
-#######################
-class ThreadTail(Thread):
+###########################
+# Classe : ThreadCompteur #
+###########################
+class ThreadCompteur(Thread):
     def __init__(self):
         Thread.__init__(self)
-        print("init du thread Tail")
+        print("init du thread Compteur")
     def run (self):
-        Tail()
-#### fin de la Classe : Threadtail
+        Compteur()
+#### fin de la Classe : ThreadCompteur
+
+
+def posi():
+    if pourcent.get() >= 100:   # centaine
+        position = 881
+        PourcentLabel01.place(x=position, y=89)
+    elif pourcent.get() > 10:   # dizaine
+        position = 873
+        PourcentLabel01.place(x=position, y=89)
+
+
+def Compteur():
+    progress = ttk.Progressbar(fenetre, maximum=300, length=400)
+    progress.pack(pady=5)
+
+    BarreLabel01 = Label(fenetre, text = 'Extraction des images',bg='slate gray')
+    BarreLabel01.pack()
+    BarreLabel01.place(x=300, y=89)
+
+    position = 865
+    PourcentLabel00 = Label(fenetre, textvariable = pourcent,bg='slate gray')
+    PourcentLabel00.pack()
+    PourcentLabel00.place(x=855, y=89)
+    PourcentLabel01 = Label(fenetre, text = '%',bg='slate gray')
+    PourcentLabel01.pack()
+    PourcentLabel01.place(x=position, y=89)
+
+    pwd = os.getcwd()
+#    print('pwd Compteur : ', pwd)
+    time.sleep(0.5)   # tempo pour laisse le temps au thread png() de créer le fichier advmngLOG
+    print('[LOG] : Compteur :')
+    NumberOfLine = 0
+    try :
+        while True:
+            pwd2 = os.getcwd()
+ #           print('pwd2 while Compteur : ',pwd2)
+  #          NumberOfLine = len(open('MediaTMP/'+nomJEU+'/advmngLOG', 'rU').readlines())
+            NumberOfLine = len(open('advmngLOG', 'rU').readlines())
+            if not NumberOfLine >= NBimages.get():   # Condition d'arrêt de la boucle si nb d'image = nb de lignes
+ #               print ('Nombre de lignes: ',NumberOfLine)
+                Ligne.set(NumberOfLine)
+                pourcent.set(round((Ligne.get()*100)/NBimages.get()))
+                if pourcent.get() >= 100:   # centaine
+                    position = 881
+                    PourcentLabel01.place(x=position, y=89)
+                elif pourcent.get() > 10:   # dizaine
+                    position = 873
+                    PourcentLabel01.place(x=position, y=89)
+                progress["maximum"] = NBimages.get()
+                progress["value"] = Ligne.get()
+                progress.update()
+            else:
+                print('MAXiMUM')    # Gruge pour assurer quand ça tombe pas bien juste
+                progress["value"] = NBimages.get()
+                pourcent.set(100)
+                progress.update()
+                if pourcent.get() >= 100:   # centaine
+                    position = 881
+                    PourcentLabel01.place(x=position, y=89)
+                elif pourcent.get() > 10:   # dizaine
+                    position = 873
+                    PourcentLabel01.place(x=position, y=89)
+                break
+
+            time.sleep(0.1) # Pour éviter au processeur de bosser comme un dingo
+
+    except FileNotFoundError:   # Si la boucle dépasse la condition d'arrêt, elle se relance, mais le chemin ayant changé car png() ne s'exécute plus, le fichier n'est pas trouvé, car au passage de «pwd while Compteur» on est descendu de deux dossiers.
+        print ('FileNotFoundError')
+        print('MAXiMUM')    # Gruge pour assurer quand ça tombe pas bien juste
+        progress["value"] = NBimages.get()
+        pourcent.set(100)
+        progress.update()
+        if pourcent.get() >= 100:   # centaine
+            position = 881
+            PourcentLabel01.place(x=position, y=89)
+        elif pourcent.get() > 10:   # dizaine
+            position = 873
+            PourcentLabel01.place(x=position, y=89)
+        pass    # évite de boucler ici bêtement
+
 
 #############################################################
 # Affichage de la sortie de clamav dans le terminal intégré #
@@ -671,7 +743,8 @@ ArborescenceExisteTelle()
 getTotalSizeTEMP()
 TestpoidTMP()
 #log.close()
-TailThread = ThreadTail()
+PNGThread = ThreadPNG()
+CompteurThread = ThreadCompteur()
 
-
+#fenetre = BarreApp()
 fenetre.mainloop()
