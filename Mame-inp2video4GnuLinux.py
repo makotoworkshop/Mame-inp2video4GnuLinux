@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.6.8
 # coding: utf-8
 #####################################################################
-################## Mame inp to video for GNU/Linux ##################
+########### Mame inp to video for GNU/Linux Version 1.0 #############
 # Convertir les parties de jeux enregistrée par mame (inp) en vidéo #
 #####################################################################
 #http://burogu.makotoworkshop.org/#
@@ -188,7 +188,7 @@ def InpFile():  # filedialogMenu : récupére le chemin des inp et le nom de l'i
     global cheminINP
     global cheminInpFolder
     global FichierINP
-    cheminINP = filedialog.askopenfilename(initialdir='.',title="Ouvrir un fichier d'input mame",filetypes=[('inp files','.inp'),('all files','.*')])
+    cheminINP = filedialog.askopenfilename(initialdir='.', title="Ouvrir un fichier d'input mame",filetypes=[('inp files','.inp'),('all files','.*')])
     if len(cheminINP) > 0:
         print ("[LOG] : vous avez choisi le fichier: %s" % cheminINP)
         InpLabel02.configure(text='-> '+cheminINP,font='Monospace 12 bold',borderwidth=3,bg='slate gray')
@@ -231,7 +231,7 @@ def playbackAVI():
     Bouton_playbackAVI.configure(state='disabled')
     Bouton_EncodageX264.configure(state='normal')
     getTotalSizeTEMP()
-    MarqueurChoix = 1   # pour le bouton encodage manuel
+    MarqueurChoix = 1   # AVI Activé pour le bouton encodage manuel
     if rapport() != 'ERROR':
         EncodageAuto('AVI')
 
@@ -369,20 +369,19 @@ def EncodageAuto(param): #  Déclenche l'encodage automatiquement ou non
         elif param == 'PNG':
             x264FromPNG()
     getTotalSizeTEMP()
-    Bouton_SupprimerTMP.configure(state='normal')
+ #   Bouton_SupprimerTMP.configure(state='disable')
 
 
 def Encodagex264(): # Obligatoire afin de permettre au bouton de fonctionner
-    print('[LOG] : Fonction Encodagex264 :')
-    global MarqueurChoix
+    print('[LOG] : Fonction Encodagex264 Manuel :')
+ #   global MarqueurChoix
     if MarqueurChoix == 1:
         print('[LOG] : MarqueurChoix = ', MarqueurChoix)
         x264FromAVI()
-        MarqueurChoix = 0
     else:
         x264FromPNG()
     getTotalSizeTEMP()
-    Bouton_SupprimerTMP.configure(state='normal')
+#    Bouton_SupprimerTMP.configure(state='disable')
 
 
 #####################
@@ -624,6 +623,7 @@ class PopupERREUR(Canvas):
         Bouton_playbackMNG.configure(state='disabled')
         Bouton_playbackMNG.configure(state='disabled')
         Bouton_EncodageX264.configure(state='disabled')
+        Bouton_SupprimerTMP.configure(state='normal')
         ChangeText(RomLabel02)
         ChangeText(InpLabel02)
         message00()
@@ -663,6 +663,7 @@ class PopupFIN():
         self.Bouton_Reinitialiser.pack(side=LEFT, padx=40, pady=10)
 
     def REstart(self):  # pour fermer le popup
+        global MarqueurChoix
         now = time.localtime(time.time())
         print('[LOG] : '+ time.strftime("%Y-%m-%d · %H:%M:%S"+' | Popup Fonction REstart', now))
         Bouton_RomPath.configure(state='normal')
@@ -670,15 +671,19 @@ class PopupFIN():
         Bouton_playbackMNG.configure(state='disabled')
         Bouton_playbackMNG.configure(state='disabled')
         Bouton_EncodageX264.configure(state='disabled')
+        Bouton_SupprimerTMP.configure(state='normal')
         ChangeText(RomLabel02)
         ChangeText(InpLabel02)
         message00()
 #     self.grab_release() # redonne l'interraction avec la fenétre mère
         PNGThread.__init__()  #### réinit du thread
         CompteurThread.__init__()  #### réinit du thread
-        if MarqueurChoix == 0:
+        if MarqueurChoix == 0 : # ne détruire que pour le mode MNG
             print('[LOG] : MarqueurChoix = ', MarqueurChoix)
             LeCompteurGraph.Destruction()
+
+        MarqueurChoix = 0
+        print(MarqueurChoix)
         print('————————————————————————————————————————————————————————————————————————————————————————')
         self.popup.destroy()
 ### fin de la Classe : Popup de fin d'opérations
