@@ -1,7 +1,6 @@
 # Mame-inp2video4GnuLinux
 Générer une vidéo à partir du fichier input d'une partie sauvegardée.
-
-https://burogu.makotoworkshop.org/index.php?post/2013/08/02/recmame
+http://burogu.makotoworkshop.org/index.php?post/2020/04/16/Mame-inp2video4GnuLinux
 
 Il est possible de mémoriser une partie jouée avec MAME sous forme de pointeur consistant en un fichier INP de quelques kio (inputs file) qu'il est alors possible de rejouer avec l'émulateur.
  
