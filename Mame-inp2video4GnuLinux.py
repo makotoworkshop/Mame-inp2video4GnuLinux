@@ -4,7 +4,9 @@
 ########### Mame inp to video for GNU/Linux Version 1.0 #############
 # Convertir les parties de jeux enregistrée par mame (inp) en vidéo #
 #####################################################################
-#http://burogu.makotoworkshop.org/#
+#http://burogu.makotoworkshop.org/index.php?post/2020/04/16/Mame-inp2video4GnuLinux
+# Licence CC BY-SA 3.0 FR https://creativecommons.org/licenses/by-sa/3.0/fr/
+
 # QFTIF :
 #ok- Demander le chemin des roms, des inp, le nom de l'inp
 #ok- Un mode aviwrite et un mode mngwrite
@@ -33,7 +35,7 @@
 #ok- Ajouter des infos bulles #https://openclassrooms.com/forum/sujet/tkinter-texte-sur-bouton-quand-la-souris-et-dessus
 #ok- Comment ignorer le mame.ini par défaut ? qui rentre en conflit
 #ok- Réactiver les log et RE7
-#- Tester le portage pour les pré-requis
+#ok- Tester le portage pour les pré-requis
 #- coller des try partout…
 
 
@@ -64,7 +66,7 @@ fenetre.title('Mame inp to video for GNU/Linux')
 width = 1300
 height = 450
 offsetX = 0
-offsetY = 600
+offsetY = 0
 fenetre.geometry('%dx%d+%d+%d' % (width, height, offsetX, offsetY))
 fenetre['bg']='slate gray'
 
@@ -678,7 +680,7 @@ class PopupFIN():
 #     self.grab_release() # redonne l'interraction avec la fenétre mère
         PNGThread.__init__()  #### réinit du thread
         CompteurThread.__init__()  #### réinit du thread
-        if MarqueurChoix == 0 : # ne détruire que pour le mode MNG
+        if MarqueurChoix == 0: # ne détruire que pour le mode MNG
             print('[LOG] : MarqueurChoix = ', MarqueurChoix)
             LeCompteurGraph.Destruction()
 
