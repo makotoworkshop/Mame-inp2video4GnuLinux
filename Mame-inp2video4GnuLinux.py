@@ -48,7 +48,7 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog
 from tkinter import tix # apt install tix
-import os, re, getpass, time, shutil, glob
+import os, re, getpass, time, shutil, glob, sys
 from threading import Thread
 
 #############
